@@ -46,6 +46,8 @@ Configuration fields:
 - `downCommands` (required): Array of commands to execute when bringing service down
 - `target-queue` (optional): Redis list to send Poppit notifications to (default: "poppit:notifications")
 
+**Note on Commands**: Commands are parsed using simple whitespace splitting. Complex commands with quoted arguments or special shell characters should be avoided. For complex operations, use shell scripts instead.
+
 ### Environment Variables
 
 - `REDIS_ADDR`: Redis server address (default: `localhost:6379`)
