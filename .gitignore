@@ -27,6 +27,12 @@ go.work.sum
 # env file
 .env
 
+# Project configuration (keep only the example)
+projects.json
+
+# Binary
+turnitoffandonagain
+
 # Editor/IDE
 # .idea/
 # .vscode/

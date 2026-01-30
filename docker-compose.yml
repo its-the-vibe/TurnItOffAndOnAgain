@@ -1,0 +1,21 @@
+services:
+  turnitoffandonagain:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: turnitoffandonagain:latest
+    container_name: turnitoffandonagain
+    environment:
+      - REDIS_ADDR=${REDIS_ADDR:-localhost:6379}
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
+      - SOURCE_LIST=${SOURCE_LIST:-service:commands}
+      - CONFIG_FILE=/config/projects.json
+    volumes:
+      # Mount the projects.json configuration file
+      - ./projects.json:/config/projects.json:ro
+      # Mount Docker socket to allow running docker commands
+      - /var/run/docker.sock:/var/run/docker.sock
+      # Mount project directories (adjust paths as needed)
+      # - /path/to/your/projects:/projects
+    restart: unless-stopped
+    network_mode: host
