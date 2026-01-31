@@ -112,7 +112,13 @@ func handlePostMessage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Process the message
-	messageJSON, _ := json.Marshal(msg)
+	messageJSON, err := json.Marshal(msg)
+	if err != nil {
+		log.Printf("Error marshaling message: %v", err)
+		http.Error(w, fmt.Sprintf("Failed to process message: %v", err), http.StatusInternalServerError)
+		return
+	}
+
 	if err := processMessage(context.Background(), redisClient, string(messageJSON)); err != nil {
 		log.Printf("Error processing message: %v", err)
 		http.Error(w, fmt.Sprintf("Failed to process message: %v", err), http.StatusInternalServerError)

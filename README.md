@@ -143,11 +143,9 @@ curl -X POST http://localhost:8080/messages \
 }
 ```
 
-**Example Error Response:**
-```json
-{
-  "error": "Message must contain either 'up' or 'down' field"
-}
+**Example Error Response (HTTP 400):**
+```
+Message must contain either 'up' or 'down' field
 ```
 
 ### How It Works
