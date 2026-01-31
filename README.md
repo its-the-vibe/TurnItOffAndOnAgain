@@ -33,7 +33,7 @@ cp projects.json.example projects.json
     "dir": "/path/to/project",
     "upCommands": ["docker compose up -d"],
     "downCommands": ["docker compose down"],
-    "target-queue": "poppit:notifications"
+    "targetQueue": "poppit:notifications"
   }
 ]
 ```

@@ -24,7 +24,7 @@ type Project struct {
 	Dir          string   `json:"dir"`
 	UpCommands   []string `json:"upCommands"`
 	DownCommands []string `json:"downCommands"`
-	TargetQueue  string   `json:"target-queue,omitempty"`
+	TargetQueue  string   `json:"targetQueue,omitempty"`
 }
 
 // RedisMessage represents incoming messages from Redis
@@ -43,12 +43,12 @@ type PoppitNotification struct {
 }
 
 var (
-	redisAddr        string
-	redisPassword    string
-	sourceList       string
-	configFile       string
+	redisAddr          string
+	redisPassword      string
+	sourceList         string
+	configFile         string
 	defaultTargetQueue string
-	projects         map[string]Project
+	projects           map[string]Project
 )
 
 func init() {
