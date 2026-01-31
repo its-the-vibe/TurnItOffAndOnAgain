@@ -5,8 +5,11 @@ services:
       dockerfile: Dockerfile
     image: turnitoffandonagain:latest
     container_name: turnitoffandonagain
+    read_only: true
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
-      - REDIS_ADDR=${REDIS_ADDR:-localhost:6379}
+      - REDIS_ADDR=${REDIS_ADDR:-host.docker.internal:6379}
       - REDIS_PASSWORD=${REDIS_PASSWORD:-}
       - SOURCE_LIST=${SOURCE_LIST:-service:commands}
       - CONFIG_FILE=/config/projects.json
@@ -16,5 +19,4 @@ services:
       - ./projects.json:/config/projects.json:ro
       # Mount project directories (adjust paths as needed)
       # - /path/to/your/projects:/projects
-    restart: unless-stopped
-    network_mode: host
+    restart: on-failure:10
