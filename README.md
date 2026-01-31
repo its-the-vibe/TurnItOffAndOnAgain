@@ -5,8 +5,7 @@ A lightweight Go service that listens to Redis for "up" and "down" commands to m
 ## Features
 
 - Listens to Redis for service lifecycle commands
-- Manages starting and stopping of configured services
-- Forwards notifications to Poppit for execution tracking
+- Forwards service lifecycle commands to Poppit for execution
 - Configurable project mappings via JSON
 - Graceful shutdown support
 - Containerized with Docker using minimal scratch image
@@ -41,12 +40,10 @@ cp projects.json.example projects.json
 
 Configuration fields:
 - `repo` (required): Repository identifier in "owner/repo" format
-- `dir` (required): Working directory where commands should be executed
-- `upCommands` (required): Array of commands to execute when bringing service up
-- `downCommands` (required): Array of commands to execute when bringing service down
-- `target-queue` (optional): Redis list to send Poppit notifications to (default: "poppit:notifications")
-
-**Note on Commands**: Commands are parsed using simple whitespace splitting. Complex commands with quoted arguments or special shell characters should be avoided. For complex operations, use shell scripts instead.
+- `dir` (required): Working directory where commands should be executed by Poppit
+- `upCommands` (required): Array of commands to send to Poppit when bringing service up
+- `downCommands` (required): Array of commands to send to Poppit when bringing service down
+- `target-queue` (optional): Redis list to send Poppit notifications to (default: uses `TARGET_QUEUE` environment variable or "poppit:notifications")
 
 ### Environment Variables
 
@@ -54,6 +51,7 @@ Configuration fields:
 - `REDIS_PASSWORD`: Redis password (default: empty)
 - `SOURCE_LIST`: Redis list name to listen for commands (default: `service:commands`)
 - `CONFIG_FILE`: Path to projects configuration file (default: `projects.json`)
+- `TARGET_QUEUE`: Default Redis list to send Poppit notifications to (default: `poppit:notifications`)
 
 ### Running Locally
 
@@ -112,13 +110,12 @@ redis-cli LPUSH service:commands '{"down":"its-the-vibe/InnerGate"}'
 1. Service listens to the configured Redis list (default: `service:commands`)
 2. When a message is received with `{"up": "repo"}` or `{"down": "repo"}`:
    - Looks up the repository configuration in `projects.json`
-   - Executes the corresponding `upCommands` or `downCommands` in the project directory
-   - Sends a notification to Poppit with the executed commands
-3. Poppit can then track and report on the service lifecycle operations
+   - Sends a notification to Poppit with the corresponding `upCommands` or `downCommands`
+3. Poppit receives the notification and executes the commands in the specified directory
 
 ### Poppit Integration
 
-The service automatically forwards notifications to Poppit in the following format:
+The service forwards notifications to Poppit in the following format:
 
 ```json
 {
@@ -130,9 +127,9 @@ The service automatically forwards notifications to Poppit in the following form
 }
 ```
 
-This allows Poppit to:
+Poppit will then:
+- Execute the commands in the specified directory
 - Track service lifecycle events
-- Execute follow-up commands if needed
 - Send notifications to Slack or other integrations
 - Maintain audit logs of service operations
 

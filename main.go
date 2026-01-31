@@ -6,9 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"os/exec"
 	"os/signal"
-	"strings"
 	"syscall"
 	"time"
 
@@ -45,11 +43,12 @@ type PoppitNotification struct {
 }
 
 var (
-	redisAddr     string
-	redisPassword string
-	sourceList    string
-	configFile    string
-	projects      map[string]Project
+	redisAddr        string
+	redisPassword    string
+	sourceList       string
+	configFile       string
+	defaultTargetQueue string
+	projects         map[string]Project
 )
 
 func init() {
@@ -58,6 +57,7 @@ func init() {
 	redisPassword = getEnv("REDIS_PASSWORD", "")
 	sourceList = getEnv("SOURCE_LIST", "service:commands")
 	configFile = getEnv("CONFIG_FILE", "projects.json")
+	defaultTargetQueue = getEnv("TARGET_QUEUE", "poppit:notifications")
 }
 
 func getEnv(key, defaultValue string) string {
@@ -196,16 +196,10 @@ func processMessage(ctx context.Context, rdb *redis.Client, message string) erro
 
 	log.Printf("Processing %s command for %s", action, repo)
 
-	// Execute commands locally
-	if err := executeCommands(project.Dir, commands); err != nil {
-		log.Printf("Failed to execute %s commands for %s: %v", action, repo, err)
-		// Continue to send notification even if execution failed
-	}
-
-	// Send notification to Poppit
+	// Send notification to Poppit (Poppit will execute the commands)
 	targetQueue := project.TargetQueue
 	if targetQueue == "" {
-		targetQueue = "poppit:notifications"
+		targetQueue = defaultTargetQueue
 	}
 
 	notification := PoppitNotification{
@@ -226,30 +220,5 @@ func processMessage(ctx context.Context, rdb *redis.Client, message string) erro
 	}
 
 	log.Printf("Sent notification to %s for %s (%s)", targetQueue, repo, action)
-	return nil
-}
-
-func executeCommands(dir string, commands []string) error {
-	for i, cmdStr := range commands {
-		log.Printf("Executing command %d/%d in %s: %s", i+1, len(commands), dir, cmdStr)
-
-		// Parse command string into command and arguments
-		parts := strings.Fields(cmdStr)
-		if len(parts) == 0 {
-			continue
-		}
-
-		cmd := exec.Command(parts[0], parts[1:]...)
-		cmd.Dir = dir
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-
-		if err := cmd.Run(); err != nil {
-			return fmt.Errorf("command '%s' failed: %w", cmdStr, err)
-		}
-
-		log.Printf("Command completed successfully: %s", cmdStr)
-	}
-
 	return nil
 }
