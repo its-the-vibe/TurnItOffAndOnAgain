@@ -3,13 +3,15 @@
     "repo": "its-the-vibe/InnerGate",
     "dir": "/Users/blah/github/its-the-vibe/InnerGate",
     "upCommands": ["docker compose up -d"],
-    "downCommands": ["docker compose down"]
+    "downCommands": ["docker compose down"],
+    "restartCommands": ["docker compose restart"]
   },
   {
     "repo": "its-the-vibe/OctoCatalog",
     "dir": "/Users/blah/github/its-the-vibe/OctoCatalog",
     "upCommands": ["docker compose up -d"],
     "downCommands": ["docker compose down"],
+    "restartCommands": ["docker compose down", "docker compose up -d"],
     "targetQueue": "poppit:notifications"
   }
 ]
