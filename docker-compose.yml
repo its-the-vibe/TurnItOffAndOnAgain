@@ -8,12 +8,15 @@ services:
     read_only: true
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    ports:
+      - "${PORT:-8080}:8080"
     environment:
       - REDIS_ADDR=${REDIS_ADDR:-host.docker.internal:6379}
       - REDIS_PASSWORD=${REDIS_PASSWORD:-}
       - SOURCE_LIST=${SOURCE_LIST:-service:commands}
       - CONFIG_FILE=/config/projects.json
       - TARGET_QUEUE=${TARGET_QUEUE:-poppit:notifications}
+      - PORT=${PORT:-8080}
     volumes:
       # Mount the projects.json configuration file
       - ./projects.json:/config/projects.json:ro
