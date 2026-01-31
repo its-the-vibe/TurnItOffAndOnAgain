@@ -97,12 +97,12 @@ Send JSON messages to the configured Redis list to control services:
 
 **Start a service:**
 ```bash
-redis-cli LPUSH service:commands '{"up":"its-the-vibe/InnerGate"}'
+redis-cli RPUSH service:commands '{"up":"its-the-vibe/InnerGate"}'
 ```
 
 **Stop a service:**
 ```bash
-redis-cli LPUSH service:commands '{"down":"its-the-vibe/InnerGate"}'
+redis-cli RPUSH service:commands '{"down":"its-the-vibe/InnerGate"}'
 ```
 
 ### How It Works
@@ -112,6 +112,31 @@ redis-cli LPUSH service:commands '{"down":"its-the-vibe/InnerGate"}'
    - Looks up the repository configuration in `projects.json`
    - Sends a notification to Poppit with the corresponding `upCommands` or `downCommands`
 3. Poppit receives the notification and executes the commands in the specified directory
+
+### Redis List Operations
+
+This service follows a consistent FIFO (First-In-First-Out) queue pattern for Redis list operations:
+
+**For Users:**
+- Use `RPUSH` to add messages to the source list (e.g., `service:commands`)
+- Messages are added to the right (tail) of the list
+
+**Service Behavior:**
+- Uses `BLPOP` to consume messages from the source list
+- Messages are consumed from the left (head) of the list
+- Uses `RPUSH` to add notifications to the target queue (e.g., `poppit:notifications`)
+- Notifications are added to the right (tail) of the target list
+
+This ensures proper FIFO ordering: the first message you push will be the first one processed, and notifications are delivered to Poppit in the correct order.
+
+**Example:**
+```bash
+# User pushes message to the right of the list
+redis-cli RPUSH service:commands '{"up":"its-the-vibe/InnerGate"}'
+
+# Service pops from the left (BLPOP) and processes
+# Service pushes to the right (RPUSH) of the target queue
+```
 
 ### Poppit Integration
 
@@ -154,7 +179,7 @@ docker run -d -p 6379:6379 redis:latest
 
 3. Send test messages:
 ```bash
-redis-cli LPUSH service:commands '{"up":"its-the-vibe/InnerGate"}'
+redis-cli RPUSH service:commands '{"up":"its-the-vibe/InnerGate"}'
 ```
 
 ## Docker Details

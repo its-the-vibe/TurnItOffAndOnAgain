@@ -131,8 +131,8 @@ func main() {
 			log.Println("Shutting down...")
 			return
 		default:
-			// BRPOP blocks until a message is available or timeout occurs
-			result, err := rdb.BRPop(ctx, 5*time.Second, sourceList).Result()
+			// BLPOP blocks until a message is available or timeout occurs
+			result, err := rdb.BLPop(ctx, 5*time.Second, sourceList).Result()
 			if err != nil {
 				if err == redis.Nil {
 					// Timeout, continue loop
@@ -215,7 +215,7 @@ func processMessage(ctx context.Context, rdb *redis.Client, message string) erro
 		return fmt.Errorf("failed to marshal notification: %w", err)
 	}
 
-	if err := rdb.LPush(ctx, targetQueue, notificationJSON).Err(); err != nil {
+	if err := rdb.RPush(ctx, targetQueue, notificationJSON).Err(); err != nil {
 		return fmt.Errorf("failed to push notification to %s: %w", targetQueue, err)
 	}
 
