@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -48,7 +49,9 @@ var (
 	sourceList         string
 	configFile         string
 	defaultTargetQueue string
+	httpPort           string
 	projects           map[string]Project
+	redisClient        *redis.Client
 )
 
 func init() {
@@ -58,6 +61,7 @@ func init() {
 	sourceList = getEnv("SOURCE_LIST", "service:commands")
 	configFile = getEnv("CONFIG_FILE", "projects.json")
 	defaultTargetQueue = getEnv("TARGET_QUEUE", "poppit:notifications")
+	httpPort = getEnv("PORT", "8080")
 }
 
 func getEnv(key, defaultValue string) string {
@@ -88,6 +92,47 @@ func loadConfig() error {
 	return nil
 }
 
+// handlePostMessage handles HTTP POST requests for message ingestion
+func handlePostMessage(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var msg RedisMessage
+	if err := json.NewDecoder(r.Body).Decode(&msg); err != nil {
+		http.Error(w, fmt.Sprintf("Invalid JSON: %v", err), http.StatusBadRequest)
+		return
+	}
+
+	// Validate message has either 'up' or 'down' field
+	if msg.Up == "" && msg.Down == "" {
+		http.Error(w, "Message must contain either 'up' or 'down' field", http.StatusBadRequest)
+		return
+	}
+
+	// Process the message
+	messageJSON, err := json.Marshal(msg)
+	if err != nil {
+		log.Printf("Error marshaling message: %v", err)
+		http.Error(w, fmt.Sprintf("Failed to process message: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	if err := processMessage(context.Background(), redisClient, string(messageJSON)); err != nil {
+		log.Printf("Error processing message: %v", err)
+		http.Error(w, fmt.Sprintf("Failed to process message: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{
+		"status":  "success",
+		"message": "Message processed successfully",
+	})
+}
+
 func main() {
 	log.Println("Starting TurnItOffAndOnAgain service...")
 
@@ -103,6 +148,7 @@ func main() {
 		DB:       0,
 	})
 	defer rdb.Close()
+	redisClient = rdb
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -114,6 +160,22 @@ func main() {
 	log.Printf("Connected to Redis at %s", redisAddr)
 	log.Printf("Listening for messages on list: %s", sourceList)
 
+	// Start HTTP server
+	http.HandleFunc("/messages", handlePostMessage)
+	httpServer := &http.Server{
+		Addr:         ":" + httpPort,
+		Handler:      nil,
+		ReadTimeout:  10 * time.Second,
+		WriteTimeout: 10 * time.Second,
+	}
+
+	go func() {
+		log.Printf("Starting HTTP server on port %s", httpPort)
+		if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("HTTP server error: %v", err)
+		}
+	}()
+
 	// Handle graceful shutdown
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
@@ -121,6 +183,14 @@ func main() {
 	go func() {
 		<-sigChan
 		log.Println("Received shutdown signal, cleaning up...")
+		
+		// Shutdown HTTP server
+		shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer shutdownCancel()
+		if err := httpServer.Shutdown(shutdownCtx); err != nil {
+			log.Printf("HTTP server shutdown error: %v", err)
+		}
+		
 		cancel()
 	}()
 

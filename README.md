@@ -5,6 +5,7 @@ A lightweight Go service that listens to Redis for "up" and "down" commands to m
 ## Features
 
 - Listens to Redis for service lifecycle commands
+- **HTTP POST endpoint** for message ingestion (alternative to Redis)
 - Forwards service lifecycle commands to Poppit for execution
 - Configurable project mappings via JSON
 - Graceful shutdown support
@@ -52,6 +53,13 @@ Configuration fields:
 - `SOURCE_LIST`: Redis list name to listen for commands (default: `service:commands`)
 - `CONFIG_FILE`: Path to projects configuration file (default: `projects.json`)
 - `TARGET_QUEUE`: Default Redis list to send Poppit notifications to (default: `poppit:notifications`)
+- `PORT`: HTTP server port for POST endpoint (default: `8080`)
+
+An example `.env.example` file is provided in the repository. Copy it to `.env` and adjust values as needed:
+
+```bash
+cp .env.example .env
+```
 
 ### Running Locally
 
@@ -93,6 +101,10 @@ docker compose logs -f turnitoffandonagain
 
 ### Message Format
 
+The service accepts messages in JSON format with either an `up` or `down` field containing the repository identifier.
+
+#### Via Redis
+
 Send JSON messages to the configured Redis list to control services:
 
 **Start a service:**
@@ -105,10 +117,41 @@ redis-cli RPUSH service:commands '{"up":"its-the-vibe/InnerGate"}'
 redis-cli RPUSH service:commands '{"down":"its-the-vibe/InnerGate"}'
 ```
 
+#### Via HTTP POST Endpoint
+
+Send HTTP POST requests to `/messages` endpoint:
+
+**Start a service:**
+```bash
+curl -X POST http://localhost:8080/messages \
+  -H "Content-Type: application/json" \
+  -d '{"up":"its-the-vibe/InnerGate"}'
+```
+
+**Stop a service:**
+```bash
+curl -X POST http://localhost:8080/messages \
+  -H "Content-Type: application/json" \
+  -d '{"down":"its-the-vibe/InnerGate"}'
+```
+
+**Example Success Response:**
+```json
+{
+  "status": "success",
+  "message": "Message processed successfully"
+}
+```
+
+**Example Error Response (HTTP 400):**
+```
+Message must contain either 'up' or 'down' field
+```
+
 ### How It Works
 
-1. Service listens to the configured Redis list (default: `service:commands`)
-2. When a message is received with `{"up": "repo"}` or `{"down": "repo"}`:
+1. Service listens to the configured Redis list (default: `service:commands`) **and** provides an HTTP POST endpoint on `/messages`
+2. When a message is received (via Redis or HTTP) with `{"up": "repo"}` or `{"down": "repo"}`:
    - Looks up the repository configuration in `projects.json`
    - Sends a notification to Poppit with the corresponding `upCommands` or `downCommands`
 3. Poppit receives the notification and executes the commands in the specified directory
