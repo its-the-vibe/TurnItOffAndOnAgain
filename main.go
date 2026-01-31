@@ -269,6 +269,9 @@ func processMessage(ctx context.Context, rdb *redis.Client, message string) erro
 		commands = project.DownCommands
 	} else if action == "restart" {
 		commands = project.RestartCommands
+		if len(commands) == 0 {
+			return fmt.Errorf("no restartCommands configured for repository: %s", repo)
+		}
 	}
 
 	log.Printf("Processing %s command for %s", action, repo)
