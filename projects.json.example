@@ -10,6 +10,6 @@
     "dir": "/Users/blah/github/its-the-vibe/OctoCatalog",
     "upCommands": ["docker compose up -d"],
     "downCommands": ["docker compose down"],
-    "target-queue": "poppit:notifications"
+    "targetQueue": "poppit:notifications"
   }
 ]

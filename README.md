@@ -43,7 +43,7 @@ Configuration fields:
 - `dir` (required): Working directory where commands should be executed by Poppit
 - `upCommands` (required): Array of commands to send to Poppit when bringing service up
 - `downCommands` (required): Array of commands to send to Poppit when bringing service down
-- `target-queue` (optional): Redis list to send Poppit notifications to (default: uses `TARGET_QUEUE` environment variable or "poppit:notifications")
+- `targetQueue` (optional): Redis list to send Poppit notifications to (default: uses `TARGET_QUEUE` environment variable or "poppit:notifications")
 
 ### Environment Variables
 
