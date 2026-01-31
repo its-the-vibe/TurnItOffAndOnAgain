@@ -16,7 +16,7 @@ services:
       - SOURCE_LIST=${SOURCE_LIST:-service:commands}
       - CONFIG_FILE=/config/projects.json
       - TARGET_QUEUE=${TARGET_QUEUE:-poppit:notifications}
-      - PORT=${PORT:-8080}
+      - PORT=8080
     volumes:
       # Mount the projects.json configuration file
       - ./projects.json:/config/projects.json:ro
