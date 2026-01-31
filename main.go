@@ -21,17 +21,19 @@ type Config struct {
 
 // Project represents a single project configuration
 type Project struct {
-	Repo         string   `json:"repo"`
-	Dir          string   `json:"dir"`
-	UpCommands   []string `json:"upCommands"`
-	DownCommands []string `json:"downCommands"`
-	TargetQueue  string   `json:"targetQueue,omitempty"`
+	Repo           string   `json:"repo"`
+	Dir            string   `json:"dir"`
+	UpCommands     []string `json:"upCommands"`
+	DownCommands   []string `json:"downCommands"`
+	RestartCommands []string `json:"restartCommands,omitempty"`
+	TargetQueue    string   `json:"targetQueue,omitempty"`
 }
 
 // RedisMessage represents incoming messages from Redis
 type RedisMessage struct {
-	Up   string `json:"up,omitempty"`
-	Down string `json:"down,omitempty"`
+	Up      string `json:"up,omitempty"`
+	Down    string `json:"down,omitempty"`
+	Restart string `json:"restart,omitempty"`
 }
 
 // PoppitNotification represents the notification format for Poppit
@@ -105,9 +107,9 @@ func handlePostMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Validate message has either 'up' or 'down' field
-	if msg.Up == "" && msg.Down == "" {
-		http.Error(w, "Message must contain either 'up' or 'down' field", http.StatusBadRequest)
+	// Validate message has either 'up' or 'down' or 'restart' field
+	if msg.Up == "" && msg.Down == "" && msg.Restart == "" {
+		http.Error(w, "Message must contain either 'up', 'down', or 'restart' field", http.StatusBadRequest)
 		return
 	}
 
@@ -248,8 +250,11 @@ func processMessage(ctx context.Context, rdb *redis.Client, message string) erro
 	} else if msg.Down != "" {
 		repo = msg.Down
 		action = "down"
+	} else if msg.Restart != "" {
+		repo = msg.Restart
+		action = "restart"
 	} else {
-		return fmt.Errorf("message must contain either 'up' or 'down' field")
+		return fmt.Errorf("message must contain either 'up', 'down', or 'restart' field")
 	}
 
 	// Look up project configuration
@@ -260,8 +265,13 @@ func processMessage(ctx context.Context, rdb *redis.Client, message string) erro
 
 	if action == "up" {
 		commands = project.UpCommands
-	} else {
+	} else if action == "down" {
 		commands = project.DownCommands
+	} else if action == "restart" {
+		commands = project.RestartCommands
+		if len(commands) == 0 {
+			return fmt.Errorf("no restartCommands configured for repository: %s", repo)
+		}
 	}
 
 	log.Printf("Processing %s command for %s", action, repo)

@@ -34,6 +34,7 @@ cp projects.json.example projects.json
     "dir": "/path/to/project",
     "upCommands": ["docker compose up -d"],
     "downCommands": ["docker compose down"],
+    "restartCommands": ["docker compose restart"],
     "targetQueue": "poppit:notifications"
   }
 ]
@@ -44,6 +45,7 @@ Configuration fields:
 - `dir` (required): Working directory where commands should be executed by Poppit
 - `upCommands` (required): Array of commands to send to Poppit when bringing service up
 - `downCommands` (required): Array of commands to send to Poppit when bringing service down
+- `restartCommands` (optional): Array of commands to send to Poppit when restarting service atomically
 - `targetQueue` (optional): Redis list to send Poppit notifications to (default: uses `TARGET_QUEUE` environment variable or "poppit:notifications")
 
 ### Environment Variables
@@ -101,7 +103,7 @@ docker compose logs -f turnitoffandonagain
 
 ### Message Format
 
-The service accepts messages in JSON format with either an `up` or `down` field containing the repository identifier.
+The service accepts messages in JSON format with either an `up`, `down`, or `restart` field containing the repository identifier.
 
 #### Via Redis
 
@@ -115,6 +117,11 @@ redis-cli RPUSH service:commands '{"up":"its-the-vibe/InnerGate"}'
 **Stop a service:**
 ```bash
 redis-cli RPUSH service:commands '{"down":"its-the-vibe/InnerGate"}'
+```
+
+**Restart a service:**
+```bash
+redis-cli RPUSH service:commands '{"restart":"its-the-vibe/InnerGate"}'
 ```
 
 #### Via HTTP POST Endpoint
@@ -135,6 +142,13 @@ curl -X POST http://localhost:8080/messages \
   -d '{"down":"its-the-vibe/InnerGate"}'
 ```
 
+**Restart a service:**
+```bash
+curl -X POST http://localhost:8080/messages \
+  -H "Content-Type: application/json" \
+  -d '{"restart":"its-the-vibe/InnerGate"}'
+```
+
 **Example Success Response:**
 ```json
 {
@@ -145,15 +159,15 @@ curl -X POST http://localhost:8080/messages \
 
 **Example Error Response (HTTP 400):**
 ```
-Message must contain either 'up' or 'down' field
+Message must contain either 'up', 'down', or 'restart' field
 ```
 
 ### How It Works
 
 1. Service listens to the configured Redis list (default: `service:commands`) **and** provides an HTTP POST endpoint on `/messages`
-2. When a message is received (via Redis or HTTP) with `{"up": "repo"}` or `{"down": "repo"}`:
+2. When a message is received (via Redis or HTTP) with `{"up": "repo"}`, `{"down": "repo"}`, or `{"restart": "repo"}`:
    - Looks up the repository configuration in `projects.json`
-   - Sends a notification to Poppit with the corresponding `upCommands` or `downCommands`
+   - Sends a notification to Poppit with the corresponding `upCommands`, `downCommands`, or `restartCommands`
 3. Poppit receives the notification and executes the commands in the specified directory
 
 ### Redis List Operations
