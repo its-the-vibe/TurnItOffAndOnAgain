@@ -21,12 +21,12 @@ type Config struct {
 
 // Project represents a single project configuration
 type Project struct {
-	Repo           string   `json:"repo"`
-	Dir            string   `json:"dir"`
-	UpCommands     []string `json:"upCommands"`
-	DownCommands   []string `json:"downCommands"`
+	Repo            string   `json:"repo"`
+	Dir             string   `json:"dir"`
+	UpCommands      []string `json:"upCommands"`
+	DownCommands    []string `json:"downCommands"`
 	RestartCommands []string `json:"restartCommands,omitempty"`
-	TargetQueue    string   `json:"targetQueue,omitempty"`
+	TargetQueue     string   `json:"targetQueue,omitempty"`
 }
 
 // RedisMessage represents incoming messages from Redis
@@ -185,14 +185,14 @@ func main() {
 	go func() {
 		<-sigChan
 		log.Println("Received shutdown signal, cleaning up...")
-		
+
 		// Shutdown HTTP server
 		shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer shutdownCancel()
 		if err := httpServer.Shutdown(shutdownCtx); err != nil {
 			log.Printf("HTTP server shutdown error: %v", err)
 		}
-		
+
 		cancel()
 	}()
 
@@ -260,7 +260,8 @@ func processMessage(ctx context.Context, rdb *redis.Client, message string) erro
 	// Look up project configuration
 	project, exists := projects[repo]
 	if !exists {
-		return fmt.Errorf("no configuration found for repository: %s", repo)
+		fmt.Printf("no configuration found for repository: %s\n", repo)
+		return nil
 	}
 
 	if action == "up" {
