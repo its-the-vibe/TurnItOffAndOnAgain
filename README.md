@@ -105,6 +105,8 @@ docker compose logs -f turnitoffandonagain
 
 The service accepts messages in JSON format with either an `up`, `down`, or `restart` field containing the repository identifier.
 
+An optional `target-queue` field can be specified to override the default Redis list that receives Poppit notifications. If omitted, the service uses the project-specific `targetQueue` from `projects.json`, or falls back to the default configured via the `TARGET_QUEUE` environment variable.
+
 #### Via Redis
 
 Send JSON messages to the configured Redis list to control services:
@@ -122,6 +124,11 @@ redis-cli RPUSH service:commands '{"down":"its-the-vibe/InnerGate"}'
 **Restart a service:**
 ```bash
 redis-cli RPUSH service:commands '{"restart":"its-the-vibe/InnerGate"}'
+```
+
+**Send to a custom target queue:**
+```bash
+redis-cli RPUSH service:commands '{"up":"its-the-vibe/InnerGate","target-queue":"poppit-builder:commands"}'
 ```
 
 #### Via HTTP POST Endpoint
@@ -149,6 +156,13 @@ curl -X POST http://localhost:8080/messages \
   -d '{"restart":"its-the-vibe/InnerGate"}'
 ```
 
+**Send to a custom target queue:**
+```bash
+curl -X POST http://localhost:8080/messages \
+  -H "Content-Type: application/json" \
+  -d '{"up":"its-the-vibe/InnerGate","target-queue":"poppit-builder:commands"}'
+```
+
 **Example Success Response:**
 ```json
 {
@@ -168,6 +182,10 @@ Message must contain either 'up', 'down', or 'restart' field
 2. When a message is received (via Redis or HTTP) with `{"up": "repo"}`, `{"down": "repo"}`, or `{"restart": "repo"}`:
    - Looks up the repository configuration in `projects.json`
    - Sends a notification to Poppit with the corresponding `upCommands`, `downCommands`, or `restartCommands`
+   - Routes the notification to:
+     - The `target-queue` specified in the message (if provided), OR
+     - The `targetQueue` specified in the project configuration (if configured), OR
+     - The default target queue from the `TARGET_QUEUE` environment variable
 3. Poppit receives the notification and executes the commands in the specified directory
 
 ### Redis List Operations
