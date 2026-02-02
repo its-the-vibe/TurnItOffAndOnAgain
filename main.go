@@ -31,9 +31,10 @@ type Project struct {
 
 // RedisMessage represents incoming messages from Redis
 type RedisMessage struct {
-	Up      string `json:"up,omitempty"`
-	Down    string `json:"down,omitempty"`
-	Restart string `json:"restart,omitempty"`
+	Up          string `json:"up,omitempty"`
+	Down        string `json:"down,omitempty"`
+	Restart     string `json:"restart,omitempty"`
+	TargetQueue string `json:"target-queue,omitempty"`
 }
 
 // PoppitNotification represents the notification format for Poppit
@@ -278,7 +279,11 @@ func processMessage(ctx context.Context, rdb *redis.Client, message string) erro
 	log.Printf("Processing %s command for %s", action, repo)
 
 	// Send notification to Poppit (Poppit will execute the commands)
-	targetQueue := project.TargetQueue
+	// Priority: message target-queue > project targetQueue > default target queue
+	targetQueue := msg.TargetQueue
+	if targetQueue == "" {
+		targetQueue = project.TargetQueue
+	}
 	if targetQueue == "" {
 		targetQueue = defaultTargetQueue
 	}
