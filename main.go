@@ -39,7 +39,7 @@ type RedisMessage struct {
 
 // PoppitNotification represents the notification format for Poppit
 type PoppitNotification struct {
-	Service  string   `json:"service"`
+	Repo     string   `json:"repo"`
 	Branch   string   `json:"branch"`
 	Type     string   `json:"type"`
 	Dir      string   `json:"dir"`
@@ -289,7 +289,7 @@ func processMessage(ctx context.Context, rdb *redis.Client, message string) erro
 	}
 
 	notification := PoppitNotification{
-		Service:  service,
+		Repo:     service,
 		Branch:   "refs/heads/main",
 		Type:     fmt.Sprintf("service-%s", action),
 		Dir:      project.Dir,
