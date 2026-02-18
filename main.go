@@ -21,7 +21,7 @@ type Config struct {
 
 // Project represents a single project configuration
 type Project struct {
-	Repo            string   `json:"repo"`
+	Service         string   `json:"service"`
 	Dir             string   `json:"dir"`
 	UpCommands      []string `json:"upCommands"`
 	DownCommands    []string `json:"downCommands"`
@@ -39,7 +39,7 @@ type RedisMessage struct {
 
 // PoppitNotification represents the notification format for Poppit
 type PoppitNotification struct {
-	Repo     string   `json:"repo"`
+	Service  string   `json:"service"`
 	Branch   string   `json:"branch"`
 	Type     string   `json:"type"`
 	Dir      string   `json:"dir"`
@@ -88,7 +88,7 @@ func loadConfig() error {
 	// Build a map for quick lookups
 	projects = make(map[string]Project)
 	for _, p := range config {
-		projects[p.Repo] = p
+		projects[p.Service] = p
 	}
 
 	log.Printf("Loaded %d project configurations", len(projects))
@@ -241,27 +241,27 @@ func processMessage(ctx context.Context, rdb *redis.Client, message string) erro
 		return fmt.Errorf("failed to parse message: %w", err)
 	}
 
-	var repo string
+	var service string
 	var commands []string
 	var action string
 
 	if msg.Up != "" {
-		repo = msg.Up
+		service = msg.Up
 		action = "up"
 	} else if msg.Down != "" {
-		repo = msg.Down
+		service = msg.Down
 		action = "down"
 	} else if msg.Restart != "" {
-		repo = msg.Restart
+		service = msg.Restart
 		action = "restart"
 	} else {
 		return fmt.Errorf("message must contain either 'up', 'down', or 'restart' field")
 	}
 
 	// Look up project configuration
-	project, exists := projects[repo]
+	project, exists := projects[service]
 	if !exists {
-		fmt.Printf("no configuration found for repository: %s\n", repo)
+		fmt.Printf("no configuration found for service: %s\n", service)
 		return nil
 	}
 
@@ -272,11 +272,11 @@ func processMessage(ctx context.Context, rdb *redis.Client, message string) erro
 	} else if action == "restart" {
 		commands = project.RestartCommands
 		if len(commands) == 0 {
-			return fmt.Errorf("no restartCommands configured for repository: %s", repo)
+			return fmt.Errorf("no restartCommands configured for service: %s", service)
 		}
 	}
 
-	log.Printf("Processing %s command for %s", action, repo)
+	log.Printf("Processing %s command for %s", action, service)
 
 	// Send notification to Poppit (Poppit will execute the commands)
 	// Priority: message target-queue > project targetQueue > default target queue
@@ -289,7 +289,7 @@ func processMessage(ctx context.Context, rdb *redis.Client, message string) erro
 	}
 
 	notification := PoppitNotification{
-		Repo:     repo,
+		Service:  service,
 		Branch:   "refs/heads/main",
 		Type:     fmt.Sprintf("service-%s", action),
 		Dir:      project.Dir,
@@ -305,6 +305,6 @@ func processMessage(ctx context.Context, rdb *redis.Client, message string) erro
 		return fmt.Errorf("failed to push notification to %s: %w", targetQueue, err)
 	}
 
-	log.Printf("Sent notification to %s for %s (%s)", targetQueue, repo, action)
+	log.Printf("Sent notification to %s for %s (%s)", targetQueue, service, action)
 	return nil
 }
