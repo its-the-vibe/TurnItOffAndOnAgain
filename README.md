@@ -30,7 +30,7 @@ cp projects.json.example projects.json
 ```json
 [
   {
-    "repo": "its-the-vibe/InnerGate",
+    "service": "its-the-vibe/InnerGate",
     "dir": "/path/to/project",
     "upCommands": ["docker compose up -d"],
     "downCommands": ["docker compose down"],
@@ -41,7 +41,7 @@ cp projects.json.example projects.json
 ```
 
 Configuration fields:
-- `repo` (required): Repository identifier in "owner/repo" format
+- `service` (required): Service identifier (e.g., "owner/repo" format for repositories, or any identifier like "ttyd" for non-repo services)
 - `dir` (required): Working directory where commands should be executed by Poppit
 - `upCommands` (required): Array of commands to send to Poppit when bringing service up
 - `downCommands` (required): Array of commands to send to Poppit when bringing service down
@@ -103,7 +103,7 @@ docker compose logs -f turnitoffandonagain
 
 ### Message Format
 
-The service accepts messages in JSON format with either an `up`, `down`, or `restart` field containing the repository identifier.
+The service accepts messages in JSON format with either an `up`, `down`, or `restart` field containing the service identifier.
 
 An optional `target-queue` field can be specified to override the default Redis list that receives Poppit notifications. If omitted, the service uses the project-specific `targetQueue` from `projects.json`, or falls back to the default configured via the `TARGET_QUEUE` environment variable.
 
@@ -219,7 +219,7 @@ The service forwards notifications to Poppit in the following format:
 
 ```json
 {
-  "repo": "its-the-vibe/InnerGate",
+  "service": "its-the-vibe/InnerGate",
   "branch": "refs/heads/main",
   "type": "service-up",
   "dir": "/path/to/project",
