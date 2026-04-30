@@ -1,5 +1,7 @@
 # TurnItOffAndOnAgain
 
+[![CI](https://github.com/its-the-vibe/TurnItOffAndOnAgain/actions/workflows/ci.yaml/badge.svg)](https://github.com/its-the-vibe/TurnItOffAndOnAgain/actions/workflows/ci.yaml)
+
 A lightweight Go service that listens to Redis for "up" and "down" commands to manage the lifecycle of specified services, forwarding actionable messages to [Poppit](https://github.com/its-the-vibe/Poppit).
 
 ## Features
@@ -235,6 +237,17 @@ Poppit will then:
 
 ## Development
 
+### Makefile
+
+A `Makefile` is provided for common development tasks:
+
+| Target | Description |
+|--------|-------------|
+| `make build` | Compile the binary (`turnitoffandonagain`) |
+| `make test` | Run all unit tests |
+| `make lint` | Run `golangci-lint` (requires [golangci-lint](https://golangci-lint.run/usage/install/)) |
+| `make clean` | Remove the compiled binary |
+
 ### Building
 
 ```bash
@@ -242,6 +255,13 @@ go build -o turnitoffandonagain .
 ```
 
 ### Testing
+
+Run unit tests:
+```bash
+make test
+# or
+go test ./...
+```
 
 To test the service manually:
 
