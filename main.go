@@ -130,10 +130,12 @@ func handlePostMessage(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]string{
+	if err := json.NewEncoder(w).Encode(map[string]string{
 		"status":  "success",
 		"message": "Message processed successfully",
-	})
+	}); err != nil {
+		log.Printf("Error encoding response: %v", err)
+	}
 }
 
 func main() {
@@ -150,16 +152,19 @@ func main() {
 		Password: redisPassword,
 		DB:       0,
 	})
-	defer rdb.Close()
 	redisClient = rdb
 
 	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 
 	// Test Redis connection
 	if err := rdb.Ping(ctx).Err(); err != nil {
+		rdb.Close()
+		cancel()
 		log.Fatalf("Failed to connect to Redis: %v", err)
 	}
+
+	defer rdb.Close()
+	defer cancel()
 	log.Printf("Connected to Redis at %s", redisAddr)
 	log.Printf("Listening for messages on list: %s", sourceList)
 
@@ -245,16 +250,17 @@ func processMessage(ctx context.Context, rdb *redis.Client, message string) erro
 	var commands []string
 	var action string
 
-	if msg.Up != "" {
+	switch {
+	case msg.Up != "":
 		service = msg.Up
 		action = "up"
-	} else if msg.Down != "" {
+	case msg.Down != "":
 		service = msg.Down
 		action = "down"
-	} else if msg.Restart != "" {
+	case msg.Restart != "":
 		service = msg.Restart
 		action = "restart"
-	} else {
+	default:
 		return fmt.Errorf("message must contain either 'up', 'down', or 'restart' field")
 	}
 
@@ -265,11 +271,12 @@ func processMessage(ctx context.Context, rdb *redis.Client, message string) erro
 		return nil
 	}
 
-	if action == "up" {
+	switch action {
+	case "up":
 		commands = project.UpCommands
-	} else if action == "down" {
+	case "down":
 		commands = project.DownCommands
-	} else if action == "restart" {
+	case "restart":
 		commands = project.RestartCommands
 		if len(commands) == 0 {
 			return fmt.Errorf("no restartCommands configured for service: %s", service)

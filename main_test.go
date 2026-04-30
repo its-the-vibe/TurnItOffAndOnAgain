@@ -48,7 +48,9 @@ func TestLoadConfig_Valid(t *testing.T) {
 	if _, err := f.WriteString(data); err != nil {
 		t.Fatal(err)
 	}
-	f.Close()
+	if err := f.Close(); err != nil {
+		t.Fatal(err)
+	}
 
 	orig := configFile
 	configFile = f.Name()
@@ -77,8 +79,12 @@ func TestLoadConfig_InvalidJSON(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	f.WriteString("not-json")
-	f.Close()
+	if _, err := f.WriteString("not-json"); err != nil {
+		t.Fatal(err)
+	}
+	if err := f.Close(); err != nil {
+		t.Fatal(err)
+	}
 
 	orig := configFile
 	configFile = f.Name()
@@ -156,7 +162,7 @@ func TestHandlePostMessage_Success(t *testing.T) {
 // --- processMessage ---
 
 func TestProcessMessage_InvalidJSON(t *testing.T) {
-	err := processMessage(nil, nil, "not-json")
+	err := processMessage(context.TODO(), nil, "not-json")
 	if err == nil {
 		t.Error("expected error for invalid JSON")
 	}
@@ -164,7 +170,7 @@ func TestProcessMessage_InvalidJSON(t *testing.T) {
 
 func TestProcessMessage_MissingAction(t *testing.T) {
 	msg, _ := json.Marshal(RedisMessage{})
-	err := processMessage(nil, nil, string(msg))
+	err := processMessage(context.TODO(), nil, string(msg))
 	if err == nil {
 		t.Error("expected error for missing action")
 	}
@@ -176,7 +182,7 @@ func TestProcessMessage_ServiceNotFound(t *testing.T) {
 	t.Cleanup(func() { projects = origProjects })
 
 	msg, _ := json.Marshal(RedisMessage{Up: "unknown-svc"})
-	err := processMessage(nil, nil, string(msg))
+	err := processMessage(context.TODO(), nil, string(msg))
 	if err != nil {
 		t.Errorf("expected nil error for missing service, got %v", err)
 	}
@@ -190,7 +196,7 @@ func TestProcessMessage_NoRestartCommands(t *testing.T) {
 	t.Cleanup(func() { projects = origProjects })
 
 	msg, _ := json.Marshal(RedisMessage{Restart: "svc"})
-	err := processMessage(nil, nil, string(msg))
+	err := processMessage(context.TODO(), nil, string(msg))
 	if err == nil {
 		t.Error("expected error when restartCommands not configured")
 	}
