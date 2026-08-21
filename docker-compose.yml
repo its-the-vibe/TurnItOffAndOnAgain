@@ -3,7 +3,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    image: turnitoffandonagain:latest
+    image: ghcr.io/its-the-vibe/turnitoffandonagain:latest
+    pull_policy: always
     container_name: turnitoffandonagain
     read_only: true
     extra_hosts:
