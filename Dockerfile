@@ -1,7 +1,10 @@
 # Build stage
-FROM golang:1.27.0-alpine AS builder
+FROM --platform=$BUILDPLATFORM golang:1.27.0-alpine AS builder
 
-WORKDIR /app
+ARG TARGETOS
+ARG TARGETARCH
+
+WORKDIR /build
 
 # Copy go mod files
 COPY go.mod go.sum ./
@@ -14,16 +17,15 @@ COPY *.go ./
 
 # Build the application
 # CGO_ENABLED=0 for static binary, GOOS=linux for Linux target
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o turnitoffandonagain .
+RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -a -installsuffix cgo -o turnitoffandonagain .
 
 # Runtime stage
-FROM scratch
+FROM gcr.io/distroless/static-debian13:nonroot
 
 # Copy the binary from builder
-COPY --from=builder /app/turnitoffandonagain /turnitoffandonagain
+COPY --from=builder /build/turnitoffandonagain /turnitoffandonagain
 
-# Copy CA certificates for HTTPS (if needed)
-COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+USER nonroot:nonroot
 
 # Set the entrypoint
 ENTRYPOINT ["/turnitoffandonagain"]
