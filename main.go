@@ -31,19 +31,21 @@ type Project struct {
 
 // RedisMessage represents incoming messages from Redis
 type RedisMessage struct {
-	Up          string `json:"up,omitempty"`
-	Down        string `json:"down,omitempty"`
-	Restart     string `json:"restart,omitempty"`
-	TargetQueue string `json:"target-queue,omitempty"`
+	Up          string          `json:"up,omitempty"`
+	Down        string          `json:"down,omitempty"`
+	Restart     string          `json:"restart,omitempty"`
+	TargetQueue string          `json:"target-queue,omitempty"`
+	Metadata    json.RawMessage `json:"metadata,omitempty"`
 }
 
 // PoppitNotification represents the notification format for Poppit
 type PoppitNotification struct {
-	Repo     string   `json:"repo"`
-	Branch   string   `json:"branch"`
-	Type     string   `json:"type"`
-	Dir      string   `json:"dir"`
-	Commands []string `json:"commands"`
+	Repo     string          `json:"repo"`
+	Branch   string          `json:"branch"`
+	Type     string          `json:"type"`
+	Dir      string          `json:"dir"`
+	Commands []string        `json:"commands"`
+	Metadata json.RawMessage `json:"metadata,omitempty"`
 }
 
 var (
@@ -301,6 +303,7 @@ func processMessage(ctx context.Context, rdb *redis.Client, message string) erro
 		Type:     fmt.Sprintf("service-%s", action),
 		Dir:      project.Dir,
 		Commands: commands,
+		Metadata: msg.Metadata,
 	}
 
 	notificationJSON, err := json.Marshal(notification)

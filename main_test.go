@@ -245,6 +245,52 @@ func TestProcessMessage_Up(t *testing.T) {
 	if notif.Type != "service-up" {
 		t.Errorf("expected type 'service-up', got %q", notif.Type)
 	}
+	if len(notif.Metadata) != 0 {
+		t.Errorf("expected metadata to be empty when not provided, got %s", string(notif.Metadata))
+	}
+}
+
+func TestProcessMessage_Up_WithMetadataPassThrough(t *testing.T) {
+	mr, err := miniredis.Run()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer mr.Close()
+
+	rdb := redis.NewClient(&redis.Options{Addr: mr.Addr()})
+
+	origProjects := projects
+	origTargetQueue := defaultTargetQueue
+	projects = map[string]Project{
+		"svc": {Service: "svc", Dir: "/tmp", UpCommands: []string{"docker compose up -d"}, DownCommands: []string{"docker compose down"}},
+	}
+	defaultTargetQueue = "poppit:notifications"
+	t.Cleanup(func() {
+		projects = origProjects
+		defaultTargetQueue = origTargetQueue
+	})
+
+	metadata := json.RawMessage(`{"taskId":"task-12345","userId":"user-456","source":"shipit"}`)
+	msg, _ := json.Marshal(RedisMessage{Up: "svc", Metadata: metadata})
+	if err := processMessage(testContext(t), rdb, string(msg)); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	items, err := mr.DB(0).List("poppit:notifications")
+	if err != nil {
+		t.Fatalf("failed to read list: %v", err)
+	}
+	if len(items) != 1 {
+		t.Fatalf("expected 1 notification in queue, got %d", len(items))
+	}
+
+	var notif PoppitNotification
+	if err := json.Unmarshal([]byte(items[0]), &notif); err != nil {
+		t.Fatalf("failed to parse notification: %v", err)
+	}
+	if string(notif.Metadata) != string(metadata) {
+		t.Errorf("expected metadata %s, got %s", string(metadata), string(notif.Metadata))
+	}
 }
 
 func TestProcessMessage_Down(t *testing.T) {
