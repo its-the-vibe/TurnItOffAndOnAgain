@@ -108,6 +108,7 @@ docker compose logs -f turnitoffandonagain
 The service accepts messages in JSON format with either an `up`, `down`, or `restart` field containing the service identifier.
 
 An optional `target-queue` field can be specified to override the default Redis list that receives Poppit notifications. If omitted, the service uses the project-specific `targetQueue` from `projects.json`, or falls back to the default configured via the `TARGET_QUEUE` environment variable.
+An optional `metadata` field can also be included with any JSON value (object, array, string, number, boolean, or null). Metadata is treated as opaque and passed through unchanged to the Poppit notification.
 
 #### Via Redis
 
@@ -131,6 +132,11 @@ redis-cli RPUSH service:commands '{"restart":"its-the-vibe/InnerGate"}'
 **Send to a custom target queue:**
 ```bash
 redis-cli RPUSH service:commands '{"up":"its-the-vibe/InnerGate","target-queue":"poppit-builder:commands"}'
+```
+
+**Start a service with metadata:**
+```bash
+redis-cli RPUSH service:commands '{"up":"its-the-vibe/InnerGate","metadata":{"taskId":"task-12345","userId":"user-456","source":"shipit"}}'
 ```
 
 #### Via HTTP POST Endpoint
@@ -165,6 +171,13 @@ curl -X POST http://localhost:8080/messages \
   -d '{"up":"its-the-vibe/InnerGate","target-queue":"poppit-builder:commands"}'
 ```
 
+**Start a service with metadata:**
+```bash
+curl -X POST http://localhost:8080/messages \
+  -H "Content-Type: application/json" \
+  -d '{"up":"its-the-vibe/InnerGate","metadata":{"taskId":"task-12345","userId":"user-456","source":"shipit"}}'
+```
+
 **Example Success Response:**
 ```json
 {
@@ -184,6 +197,7 @@ Message must contain either 'up', 'down', or 'restart' field
 2. When a message is received (via Redis or HTTP) with `{"up": "repo"}`, `{"down": "repo"}`, or `{"restart": "repo"}`:
    - Looks up the repository configuration in `projects.json`
    - Sends a notification to Poppit with the corresponding `upCommands`, `downCommands`, or `restartCommands`
+   - Passes through `metadata` unchanged if provided in the incoming message
    - Routes the notification to:
      - The `target-queue` specified in the message (if provided), OR
      - The `targetQueue` specified in the project configuration (if configured), OR
@@ -221,11 +235,16 @@ The service forwards notifications to Poppit in the following format:
 
 ```json
 {
-  "service": "its-the-vibe/InnerGate",
+  "repo": "its-the-vibe/InnerGate",
   "branch": "refs/heads/main",
   "type": "service-up",
   "dir": "/path/to/project",
-  "commands": ["docker compose up -d"]
+  "commands": ["docker compose up -d"],
+  "metadata": {
+    "taskId": "task-12345",
+    "userId": "user-456",
+    "source": "shipit"
+  }
 }
 ```
 
